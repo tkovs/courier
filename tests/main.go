@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	"../../sender"
+	"github.com/tkovs/courier"
 )
 
 func main() {
