@@ -17,35 +17,24 @@ func (this *Courier) GetReady() {
 }
 
 func (this *Courier) GetStart() {
-	var ticker *time.Ticker
-	var tick, ticks int
+	var timeout int
 
 	this.Messages = make(chan string, 5)
-	ticks = 10
-	ticksInterval := 500
-	tick = ticks
-	ticker = time.NewTicker(time.Duration(ticksInterval) * time.Millisecond)
+	timeout = 5
 
-	for range ticker.C {
+	for {
 		select {
 		case message, ok := <-this.Messages:
 			if ok {
-				fmt.Printf("{Courier: %s, Tick: %d, Message: %s}\n", this.CourierID, tick, message)
-				tick = ticks
+				fmt.Printf("{Courier: %s, Message: %s}\n", this.CourierID, message)
 			} else {
 				// self destruct
 			}
-		default:
-			fmt.Printf("{Courier: %s, Tick: %d}\n", this.CourierID, tick)
-			tick--
-		}
-
-		if tick <= 0 {
-			ticker.Stop()
+		case <-time.After(time.Duration(timeout) * time.Second):
+			fmt.Printf("{Courier: %s, Status: %s}\n", this.CourierID, "My job is done.")
 			break
 		}
 	}
 
 	// self destruct
-	fmt.Printf("{Courier: %s, Status: %s}", this.CourierID, "My job is done.")
 }
