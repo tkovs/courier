@@ -3,21 +3,19 @@ package main
 import (
 	"time"
 
-	"github.com/tkovs/courier"
+	"../src/courier"
 )
 
 func main() {
 	var c courier.Courier
 
-	c = courier.Courier{}
-	c.CourierID = "5582999542550"
+	c = courier.Courier{Identity: "558299542550"}
 	c.GetReady()
 
-	time.Sleep(2 * time.Second)
-	c.Messages <- "Hello, there!"
-	time.Sleep(3 * time.Second)
-	c.Messages <- "Hello, there!"
-	time.Sleep(1 * time.Second)
-	c.Messages <- "Byee"
-	time.Sleep(10 * time.Second)
+	c.Messages <- courier.Message{"Opa!", "558299406148"}
+	c.Messages <- courier.Message{"Verificamos uma pendência de R$500,00 no sistem que está no seu nome.", "558299406148"}
+	c.Messages <- courier.Message{"Podemos negociar o pagamento em até 3x sem juros no cartão.", "558299406148"}
+	c.Messages <- courier.Message{"Aguardamos contato\n, Plussoft.", "558299406148"}
+
+	time.Sleep(50 * time.Second)
 }
