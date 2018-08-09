@@ -3,19 +3,27 @@ package main
 import (
 	"time"
 
-	"../src/courier"
+	"github.com/tkovs/courier"
 )
 
 func main() {
-	var c courier.Courier
+	mediator := courier.NewMediator()
 
-	c = courier.Courier{Identity: "558299542550"}
-	c.GetReady()
+	mediator.SendMessage(courier.Job{
+		Message: courier.Message{
+			Content:   "Nunca mais lhe vi. Viajou?",
+			Recipient: "558296495932",
+		},
+		Sender: "558299542550",
+	})
 
-	c.Messages <- courier.Message{"Opa!", "558299406148"}
-	c.Messages <- courier.Message{"Verificamos uma pendência de R$500,00 no sistem que está no seu nome.", "558299406148"}
-	c.Messages <- courier.Message{"Podemos negociar o pagamento em até 3x sem juros no cartão.", "558299406148"}
-	c.Messages <- courier.Message{"Aguardamos contato\n, Plussoft.", "558299406148"}
+	mediator.SendMessage(courier.Job{
+		Message: courier.Message{
+			Content:   "Opa! Apenas testando essa nova ferramenta",
+			Recipient: "558296495932",
+		},
+		Sender: "558299011113",
+	})
 
-	time.Sleep(50 * time.Second)
+	time.Sleep(10 * time.Second)
 }

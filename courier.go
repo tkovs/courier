@@ -18,43 +18,29 @@ type Courier struct {
 	Messages chan Message
 }
 
-func (this *Courier) readSession() error {
-	this.Session = whatsapp.Session{}
-	file, err := os.Open("~/git/courier/sessions/" + this.Identity + ".was")
-	if err != nil {
-		return err
+func NewCourier(identity string) (*Courier, error) {
+	// Creates a new Courier
+	courier := new(Courier)
+	courier.Identity = identity
+	courier.Messages = make(chan Message, 5)
+
+	// Regains the session
+	if err := courier.readSession(); err != nil {
+		fmt.Printf("ERROR NA SESSÃO: %s", err.Error())
+		return nil, err
 	}
 
-	defer file.Close()
-	decoder := gob.NewDecoder(file)
-	err = decoder.Decode(&this.Session)
-
-	return err
-}
-
-func (this *Courier) GetReady() {
-	this.Messages = make(chan Message, 5)
-
-	if err := this.readSession(); err != nil {
-		fmt.Println(os.Stderr, "Error on reading "+this.Identity+" session file!\nError description: "+err.Error())
-		return
-	}
-
-	go this.start()
+	go courier.start()
+	return courier, nil
 }
 
 func (this *Courier) start() {
 	var timeout int
-	var err error
 	var wac *whatsapp.Conn
 
-	// Try open the whatsapp websocket
-	wac, err = whatsapp.NewConn(10 * time.Second)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error creating connection: %v\n", err)
-		return
-	}
+	fmt.Println(os.Stdout, "{"+this.Identity+"}")
 
+	wac, _ = whatsapp.NewConn(10 * time.Second)
 	wac.RestoreSession(this.Session)
 
 	timeout = 60
@@ -63,14 +49,15 @@ func (this *Courier) start() {
 		select {
 		case message, ok := <-this.Messages:
 			if ok {
-				// fmt.Printf("{Courier: %s, Message: %s}\n", this.Identity, message)
-				wac.Send(whatsapp.TextMessage{
+				msg := whatsapp.TextMessage{
 					Info: whatsapp.MessageInfo{
 						RemoteJid: message.Recipient + "@s.whatsapp.net",
 					},
 
 					Text: message.Content,
-				})
+				}
+
+				wac.Send(msg)
 
 				time.Sleep(5 * time.Second)
 			} else {
@@ -87,4 +74,18 @@ func (this *Courier) start() {
 	// TODO:
 	// self destruct
 	// return
+}
+
+func (this *Courier) readSession() error {
+	this.Session = whatsapp.Session{}
+	file, err := os.Open("~/.courier/sessions/" + this.Identity + ".was")
+	if err != nil {
+		return err
+	}
+
+	defer file.Close()
+	decoder := gob.NewDecoder(file)
+	err = decoder.Decode(&this.Session)
+
+	return err
 }
