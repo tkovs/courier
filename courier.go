@@ -78,7 +78,7 @@ func (this *Courier) start() {
 
 func (this *Courier) readSession() error {
 	this.Session = whatsapp.Session{}
-	file, err := os.Open("~/.courier/sessions/" + this.Identity + ".was")
+	file, err := os.Open("/home/tkovs/.courier/sessions/" + this.Identity + ".was")
 	if err != nil {
 		return err
 	}
