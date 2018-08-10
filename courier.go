@@ -13,9 +13,9 @@ import (
 // Identity, actually, is the phone number
 // Messages is a channel where the mediator inserts the messages to be send
 type Courier struct {
-	Identity   string
-	Messages   chan Message
-	Connection *whatsapp.Conn
+	Identity string
+	Messages chan Message
+	conn     *whatsapp.Conn
 }
 
 func NewCourier(identity string, bye chan string) (*Courier, error) {
@@ -27,21 +27,29 @@ func NewCourier(identity string, bye chan string) (*Courier, error) {
 	courier.Identity = identity
 
 	// Regains the session
-	if session, err = courier.readSession(); err != nil {
+	if session, err = courier.getSession(); err != nil {
 		return nil, err
 	}
 
-	courier.Connection, _ = whatsapp.NewConn(10 * time.Second)
-	courier.Connection.RestoreSession(*session)
+	courier.Connect(session)
 
 	go courier.start(bye)
 	return courier, nil
 }
 
+func (this *Courier) Connect(session *whatsapp.Session) error {
+	var err error
+
+	this.conn, err = whatsapp.NewConn(10 * time.Second)
+	this.conn.RestoreSession(*session)
+
+	return err
+}
+
 func (this *Courier) start(bye chan<- string) {
 	timeout := 10
 
-	for this.Connection != nil {
+	for this.conn != nil {
 		select {
 		case message, ok := <-this.Messages:
 			if ok {
@@ -53,21 +61,21 @@ func (this *Courier) start(bye chan<- string) {
 					Text: message.Content,
 				}
 
-				this.Connection.Send(msg)
+				this.conn.Send(msg)
 
 				time.Sleep(5 * time.Second)
 			} else {
-				this.Connection = nil
+				this.conn = nil
 			}
 		case <-time.After(time.Duration(timeout) * time.Second):
-			this.Connection = nil
+			this.conn = nil
 		}
 	}
 
 	bye <- this.Identity
 }
 
-func (this *Courier) readSession() (*whatsapp.Session, error) {
+func (this *Courier) getSession() (*whatsapp.Session, error) {
 	session := new(whatsapp.Session)
 	home, _ := homedir.Dir()
 	file, err := os.Open(home + "/.courier/sessions/" + this.Identity + ".was")
