@@ -6,6 +6,7 @@ import (
 	"time"
 
 	whatsapp "github.com/Rhymen/go-whatsapp"
+	"github.com/mitchellh/go-homedir"
 )
 
 // Courier is just the messenger
@@ -71,7 +72,8 @@ func (this *Courier) start() {
 
 func (this *Courier) readSession() error {
 	this.Session = whatsapp.Session{}
-	file, err := os.Open("C:/Users/tkovs/.courier/sessions/" + this.Identity + ".was")
+	home, _ := homedir.Dir()
+	file, err := os.Open(home + "/.courier/sessions/" + this.Identity + ".was")
 	if err != nil {
 		return err
 	}

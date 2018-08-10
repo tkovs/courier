@@ -3,8 +3,7 @@ package main
 import (
 	"time"
 
-	//"github.com/tkovs/courier"
-	courier ".."
+	"github.com/tkovs/courier"
 )
 
 func main() {
