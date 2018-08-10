@@ -36,7 +36,7 @@ func (this *Mediator) SendMessage(job Job) error {
 		if err != nil {
 			return err
 		}
-		this.Couriers[c.Identity] = c
+		this.Couriers[job.Sender] = c
 	}
 
 	c.Messages <- job.Message

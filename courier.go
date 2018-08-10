@@ -13,38 +13,35 @@ import (
 // Identity, actually, is the phone number
 // Messages is a channel where the mediator inserts the messages to be send
 type Courier struct {
-	Identity string
-	Session  whatsapp.Session
-	Messages chan Message
-	Bye      chan string
+	Identity   string
+	Messages   chan Message
+	Connection *whatsapp.Conn
 }
 
 func NewCourier(identity string, bye chan string) (*Courier, error) {
+	var session *whatsapp.Session
+	var err error
 	// Creates a new Courier
 	courier := new(Courier)
-	courier.Identity = identity
 	courier.Messages = make(chan Message, 5)
-	courier.Bye = bye
+	courier.Identity = identity
 
 	// Regains the session
-	if err := courier.readSession(); err != nil {
+	if session, err = courier.readSession(); err != nil {
 		return nil, err
 	}
 
-	go courier.start()
+	courier.Connection, _ = whatsapp.NewConn(10 * time.Second)
+	courier.Connection.RestoreSession(*session)
+
+	go courier.start(bye)
 	return courier, nil
 }
 
-func (this *Courier) start() {
-	var timeout int
-	var wac *whatsapp.Conn
+func (this *Courier) start(bye chan<- string) {
+	timeout := 10
 
-	wac, _ = whatsapp.NewConn(10 * time.Second)
-	wac.RestoreSession(this.Session)
-
-	timeout = 60
-
-	for wac != nil {
+	for this.Connection != nil {
 		select {
 		case message, ok := <-this.Messages:
 			if ok {
@@ -56,31 +53,31 @@ func (this *Courier) start() {
 					Text: message.Content,
 				}
 
-				wac.Send(msg)
+				this.Connection.Send(msg)
 
 				time.Sleep(5 * time.Second)
 			} else {
-				wac = nil
+				this.Connection = nil
 			}
 		case <-time.After(time.Duration(timeout) * time.Second):
-			wac = nil
+			this.Connection = nil
 		}
 	}
 
-	this.Bye <- this.Identity
+	bye <- this.Identity
 }
 
-func (this *Courier) readSession() error {
-	this.Session = whatsapp.Session{}
+func (this *Courier) readSession() (*whatsapp.Session, error) {
+	session := new(whatsapp.Session)
 	home, _ := homedir.Dir()
 	file, err := os.Open(home + "/.courier/sessions/" + this.Identity + ".was")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	defer file.Close()
 	decoder := gob.NewDecoder(file)
-	err = decoder.Decode(&this.Session)
+	err = decoder.Decode(&session)
 
-	return err
+	return session, err
 }
