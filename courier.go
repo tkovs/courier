@@ -2,7 +2,6 @@ package courier
 
 import (
 	"encoding/gob"
-	"fmt"
 	"os"
 	"time"
 
@@ -16,17 +15,18 @@ type Courier struct {
 	Identity string
 	Session  whatsapp.Session
 	Messages chan Message
+	Bye      chan string
 }
 
-func NewCourier(identity string) (*Courier, error) {
+func NewCourier(identity string, bye chan string) (*Courier, error) {
 	// Creates a new Courier
 	courier := new(Courier)
 	courier.Identity = identity
 	courier.Messages = make(chan Message, 5)
+	courier.Bye = bye
 
 	// Regains the session
 	if err := courier.readSession(); err != nil {
-		fmt.Printf("ERROR NA SESSÃO: %s", err.Error())
 		return nil, err
 	}
 
@@ -38,14 +38,12 @@ func (this *Courier) start() {
 	var timeout int
 	var wac *whatsapp.Conn
 
-	fmt.Println(os.Stdout, "{"+this.Identity+"}")
-
 	wac, _ = whatsapp.NewConn(10 * time.Second)
 	wac.RestoreSession(this.Session)
 
 	timeout = 60
 
-	for {
+	for wac != nil {
 		select {
 		case message, ok := <-this.Messages:
 			if ok {
@@ -61,24 +59,19 @@ func (this *Courier) start() {
 
 				time.Sleep(5 * time.Second)
 			} else {
-				// TODO:
-				// self destruct
-				// return
+				wac = nil
 			}
 		case <-time.After(time.Duration(timeout) * time.Second):
-			fmt.Printf("{Courier: %s, Status: %s}\n", this.Identity, "My job is done.")
-			break
+			wac = nil
 		}
 	}
 
-	// TODO:
-	// self destruct
-	// return
+	this.Bye <- this.Identity
 }
 
 func (this *Courier) readSession() error {
 	this.Session = whatsapp.Session{}
-	file, err := os.Open("/home/tkovs/.courier/sessions/" + this.Identity + ".was")
+	file, err := os.Open("C:/Users/tkovs/.courier/sessions/" + this.Identity + ".was")
 	if err != nil {
 		return err
 	}
