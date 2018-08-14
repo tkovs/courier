@@ -1,27 +1,18 @@
 package main
 
 import (
-	"fmt"
-	"time"
+	// "github.com/tkovs/courier"
 
-	"github.com/tkovs/courier"
+	"fmt"
+
+	courier ".."
 )
 
 func main() {
-	var err error
-	mediator := courier.NewMediator()
-
-	err = mediator.SendMessage(courier.Job{
-		Message: courier.Message{
-			Content:   "Nunca mais lhe vi. Viajou?",
-			Recipient: "558299542550",
-		},
-		Sender: "558299542550",
-	})
-
+	db, err := courier.Migrate()
 	if err != nil {
-		fmt.Println("Erro:", err.Error())
+		fmt.Println(err)
 	}
 
-	time.Sleep(30 * time.Second)
+	courier.CreateAccount(db, courier.AccountModel{Phone: "558299542550"})
 }
