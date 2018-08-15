@@ -9,10 +9,10 @@ import (
 )
 
 func main() {
-	db, err := courier.Migrate()
-	if err != nil {
-		fmt.Println(err)
-	}
+	m := courier.Monitor{}
+	err := m.Start()
 
-	courier.CreateAccount(db, courier.AccountModel{Phone: "558299542550"})
+	if err != nil {
+		fmt.Println("Erro:", err.Error())
+	}
 }

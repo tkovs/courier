@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	// test
 	_ "github.com/lib/pq"
 )
 
@@ -17,6 +16,7 @@ CREATE TABLE account (
 CREATE TABLE message (
 	id SERIAL PRIMARY KEY,
 	sender_id INTEGER REFERENCES account(id),
+	receiver_phone VARCHAR(12) NOT NULL,
 	message TEXT NOT NULL,
 	status SMALLINT NOT NULL,
 	scheduledto TIMESTAMP
@@ -31,16 +31,10 @@ CREATE TABLE license (
 );`
 
 type AccountModel struct {
-	ID    uint
-	Phone string
-}
-
-type MessageModel struct {
-	ID          uint
-	SenderID    uint
-	Message     string
-	Status      int
-	ScheduledTo time.Time
+	ID       uint
+	Phone    string
+	License  *LicenseModel  `db:"-"`
+	Messages []MessageModel `db:"-"`
 }
 
 type LicenseModel struct {
@@ -49,6 +43,17 @@ type LicenseModel struct {
 	Kind       int
 	Status     int
 	Expiration time.Time
+	Account    *AccountModel `db:"-"`
+}
+
+type MessageModel struct {
+	ID            uint
+	SenderID      uint   `db:"sender_id"`
+	ReceiverPhone string `db:"receiver_phone"`
+	Message       string
+	Status        int
+	ScheduledTo   time.Time
+	account       *AccountModel `db:"-"`
 }
 
 func CreateAccount(db *sqlx.DB, account AccountModel) {
@@ -64,6 +69,32 @@ func CreateAccount(db *sqlx.DB, account AccountModel) {
 	tx.Commit()
 }
 
+func (m *MessageModel) GetAccount(db *sqlx.DB) (AccountModel, error) {
+	if m.account != nil {
+		return *m.account, nil
+	}
+
+	m.account = &AccountModel{}
+	err := db.Get(m.account, "SELECT * FROM account WHERE id = $1", m.SenderID)
+
+	if err != nil {
+		return AccountModel{}, err
+	}
+
+	return *m.account, nil
+}
+
+func (m *MessageModel) SetSent(db *sqlx.DB) error {
+	query := "UPDATE message SET status = 1 WHERE id = :id"
+	_, err := db.NamedExec(query, m)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func Migrate() (*sqlx.DB, error) {
 	db, err := sqlx.Connect("postgres", "user=postgres dbname=wpcourier sslmode=disable")
 	if err != nil {
@@ -71,9 +102,9 @@ func Migrate() (*sqlx.DB, error) {
 	}
 
 	// TODO:
-	// Check if the schema was running
+	// Verify that migration has already been performed
 	// Tip: To use migrations
-	db.MustExec(schema)
+	// db.MustExec(schema)
 
 	return db, nil
 }
