@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/getsentry/raven-go"
+
 	_ "github.com/lib/pq"
 )
 
@@ -24,7 +26,8 @@ func (m *Monitor) Start() error {
 
 	db, err := Migrate()
 	if err != nil {
-		fmt.Println(err)
+		raven.CaptureErrorAndWait(err, nil)
+		return err
 	}
 
 	for _ = range ticker.C {
