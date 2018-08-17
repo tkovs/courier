@@ -6,6 +6,7 @@ import (
 	"time"
 
 	whatsapp "github.com/Rhymen/go-whatsapp"
+	raven "github.com/getsentry/raven-go"
 	"github.com/mitchellh/go-homedir"
 )
 
@@ -31,7 +32,10 @@ func NewCourier(identity string, bye chan string) (*Courier, error) {
 		return nil, err
 	}
 
-	courier.Connect(session)
+	err = courier.Connect(session)
+	if err != nil {
+		return nil, err
+	}
 
 	go courier.start(bye)
 	return courier, nil
@@ -61,7 +65,11 @@ func (this *Courier) start(bye chan<- string) {
 					Text: message.Content,
 				}
 
-				this.conn.Send(msg)
+				err := this.conn.Send(msg)
+				if err != nil {
+					raven.CaptureErrorAndWait(err, nil)
+					bye <- this.Identity
+				}
 
 				time.Sleep(5 * time.Second)
 			} else {
