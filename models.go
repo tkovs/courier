@@ -18,8 +18,8 @@ CREATE TABLE message (
 	sender_id INTEGER REFERENCES account(id),
 	receiver_phone VARCHAR(12) NOT NULL,
 	message TEXT NOT NULL,
-	status SMALLINT NOT NULL,
-	scheduledto TIMESTAMP
+	status SMALLINT NOT NULL DEFAULT 0,
+	scheduledto TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE license (
@@ -86,6 +86,17 @@ func (m *MessageModel) GetAccount(db *sqlx.DB) (AccountModel, error) {
 
 func (m *MessageModel) SetSent(db *sqlx.DB) error {
 	query := "UPDATE message SET status = 1 WHERE id = :id"
+	_, err := db.NamedExec(query, m)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *MessageModel) SetError(db *sqlx.DB) error {
+	query := "UPDATE message SET status = 2 WHERE id = :id"
 	_, err := db.NamedExec(query, m)
 
 	if err != nil {

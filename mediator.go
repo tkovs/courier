@@ -1,12 +1,18 @@
 package courier
 
+import (
+	"github.com/jmoiron/sqlx"
+)
+
 type Mediator struct {
 	Couriers map[string]*Courier
 	Shutdown chan string
+	DB       *sqlx.DB
 }
 
-func NewMediator() *Mediator {
+func NewMediator(db *sqlx.DB) *Mediator {
 	mediator := new(Mediator)
+	mediator.DB = db
 	mediator.Couriers = make(map[string]*Courier)
 	mediator.Shutdown = make(chan string)
 	go mediator.reaper()
@@ -32,7 +38,7 @@ func (this *Mediator) SendMessage(job Job) error {
 	c, ok = this.Couriers[job.Sender]
 	if !ok {
 		// TODO: Check the error message
-		c, err = NewCourier(job.Sender, this.Shutdown)
+		c, err = NewCourier(job.Sender, this.Shutdown, this.DB)
 		if err != nil {
 			return err
 		}

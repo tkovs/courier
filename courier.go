@@ -7,6 +7,7 @@ import (
 
 	whatsapp "github.com/Rhymen/go-whatsapp"
 	raven "github.com/getsentry/raven-go"
+	"github.com/jmoiron/sqlx"
 	"github.com/mitchellh/go-homedir"
 )
 
@@ -15,17 +16,20 @@ import (
 // Messages is a channel where the mediator inserts the messages to be send
 type Courier struct {
 	Identity string
-	Messages chan Message
+	Messages chan MessageModel
 	conn     *whatsapp.Conn
+	DB       *sqlx.DB
 }
 
-func NewCourier(identity string, bye chan string) (*Courier, error) {
+func NewCourier(identity string, bye chan string, db *sqlx.DB) (*Courier, error) {
 	var session *whatsapp.Session
 	var err error
+
 	// Creates a new Courier
 	courier := new(Courier)
-	courier.Messages = make(chan Message, 5)
+	courier.Messages = make(chan MessageModel, 5)
 	courier.Identity = identity
+	courier.DB = db
 
 	// Regains the session
 	if session, err = courier.getSession(); err != nil {
@@ -59,28 +63,30 @@ func (this *Courier) start(bye chan<- string) {
 			if ok {
 				msg := whatsapp.TextMessage{
 					Info: whatsapp.MessageInfo{
-						RemoteJid: message.Recipient + "@s.whatsapp.net",
+						RemoteJid: message.ReceiverPhone + "@s.whatsapp.net",
 					},
 
-					Text: message.Content,
+					Text: message.Message,
 				}
 
 				err := this.conn.Send(msg)
 				if err != nil {
 					raven.CaptureErrorAndWait(err, nil)
+					message.SetError(this.DB)
 					bye <- this.Identity
 				}
 
+				message.SetSent(this.DB)
 				time.Sleep(5 * time.Second)
 			} else {
+				bye <- this.Identity
 				this.conn = nil
 			}
 		case <-time.After(time.Duration(timeout) * time.Second):
+			bye <- this.Identity
 			this.conn = nil
 		}
 	}
-
-	bye <- this.Identity
 }
 
 func (this *Courier) getSession() (*whatsapp.Session, error) {
